@@ -1,0 +1,35 @@
+name: Update Schul-Feed
+
+on:
+  schedule:
+    - cron: "0 5,11,17 * * *"   # 3x taeglich (UTC) - reicht fuer Stundenplanaenderungen
+  workflow_dispatch:            # manueller Start per Knopf im Actions-Tab
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install webuntis icalendar
+
+      - env:
+          WEBUNTIS_SERVER: ${{ secrets.WEBUNTIS_SERVER }}
+          WEBUNTIS_SCHOOL: ${{ secrets.WEBUNTIS_SCHOOL }}
+          WEBUNTIS_USER: ${{ secrets.WEBUNTIS_USER }}
+          WEBUNTIS_PASSWORD: ${{ secrets.WEBUNTIS_PASSWORD }}
+        run: python transform_untis.py
+
+      - run: |
+          git config user.name "cal-bot"
+          git config user.email "cal-bot@users.noreply.github.com"
+          git add schule.ics
+          git diff --staged --quiet || git commit -m "update schule.ics"
+          git push
